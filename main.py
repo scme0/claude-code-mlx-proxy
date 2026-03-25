@@ -44,7 +44,7 @@ class SystemContent(BaseModel):
 
 
 class ThinkingConfig(BaseModel):
-    type: Literal["enabled", "disabled"]
+    type: Literal["enabled", "disabled", "adaptive"]
     budget_tokens: Optional[int] = None
 
 
@@ -84,6 +84,7 @@ class MessagesRequest(BaseModel):
     tool_choice: Optional[Dict[str, Any]] = None
     thinking: Optional[ThinkingConfig] = None
     original_model: Optional[str] = None
+    betas: Optional[List[str]] = None
 
 
 class TokenCountRequest(BaseModel):
@@ -94,11 +95,14 @@ class TokenCountRequest(BaseModel):
     thinking: Optional[ThinkingConfig] = None
     tool_choice: Optional[Dict[str, Any]] = None
     original_model: Optional[str] = None
+    betas: Optional[List[str]] = None
 
 
 class Usage(BaseModel):
     input_tokens: int
     output_tokens: int
+    cache_creation_input_tokens: Optional[int] = 0
+    cache_read_input_tokens: Optional[int] = 0
 
 
 class MessageResponse(BaseModel):
@@ -400,6 +404,54 @@ async def stream_generate_response(
     # Send message stop
     message_stop = {"type": "message_stop"}
     yield f"event: message_stop\ndata: {json.dumps(message_stop)}\n\n"
+
+
+@app.get("/v1/models")
+async def list_models():
+    # Return common Claude model IDs so Claude Code can validate any model name
+    model_ids = [
+        config.API_MODEL_NAME,
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5",
+        "claude-opus-4-5",
+        "claude-sonnet-4-5",
+        "claude-opus-4-0",
+        "claude-sonnet-4-0",
+    ]
+    # Deduplicate while preserving order
+    seen = set()
+    unique_ids = []
+    for mid in model_ids:
+        if mid not in seen:
+            seen.add(mid)
+            unique_ids.append(mid)
+
+    models = [
+        {
+            "type": "model",
+            "id": mid,
+            "display_name": mid,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+        for mid in unique_ids
+    ]
+    return {
+        "data": models,
+        "has_more": False,
+        "first_id": models[0]["id"] if models else None,
+        "last_id": models[-1]["id"] if models else None,
+    }
+
+
+@app.get("/v1/models/{model_id:path}")
+async def get_model(model_id: str):
+    return {
+        "type": "model",
+        "id": model_id,
+        "display_name": model_id,
+        "created_at": "2025-01-01T00:00:00Z",
+    }
 
 
 @app.get("/health")

@@ -23,7 +23,7 @@ class Config:
     DEFAULT_TOP_P: float = float(os.getenv("DEFAULT_TOP_P", "1.0"))
 
     # API settings
-    API_MODEL_NAME: str = os.getenv("API_MODEL_NAME", "claude-4-sonnet-20250514")
+    API_MODEL_NAME: str = os.getenv("API_MODEL_NAME", "claude-sonnet-4-6")
 
     # Logging
     VERBOSE: bool = os.getenv("VERBOSE", "false").lower() == "true"
